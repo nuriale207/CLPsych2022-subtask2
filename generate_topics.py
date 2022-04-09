@@ -76,7 +76,7 @@ def createPLDAlist(parametros, cuerpo, etiquetas):
     return createPLDA(min_cf, rm_top, latent_topics, topics_per_label, alpha, eta,cuerpo,etiquetas)
 
 
-def createPLDA(min_cf, rm_top, latent_topics, topics_per_label, alpha, eta, cuerpo, etiquetas):
+def createPLDA(min_cf, rm_top, topics_per_label, alpha, eta, cuerpo, etiquetas):
     """ Crea el modelo PLDA, dados unos parámetros, documentos y etiquetas
 
                              Parámetros:
@@ -89,14 +89,14 @@ def createPLDA(min_cf, rm_top, latent_topics, topics_per_label, alpha, eta, cuer
                                     cuerpo -- lista de listas con las palabras de cada documento
                                     etiquetas -- lista de listas con las etiquetas de cada documento
     """
-    model = tp.PLDAModel(tw=tp.TermWeight.IDF, min_cf=min_cf, rm_top=rm_top, latent_topics=latent_topics,
+    model = tp.PLDAModel(tw=tp.TermWeight.IDF, min_cf=min_cf, rm_top=rm_top,
                          topics_per_label=topics_per_label, alpha=alpha, eta=eta)
     count = 0
 
     for document, tags in zip(cuerpo, etiquetas):
-        model.add_doc(document, labels=tags)
+        model.add_doc(document, labels=[tags])
         count += 1
-
+    model.train(500)
     return model
 
 
@@ -138,8 +138,6 @@ def crearModeloClasificacion(documentos,modelo):
                   Parámetros:
                   documentos -- una lista de listas en la que se almacenan los documentos
                   modelo -- modelo LDA que se emplea para inferir los topics
-              .
-
               """
     lista = []
     i=0
