@@ -149,3 +149,11 @@ def crearModeloClasificacion(documentos,modelo):
         if(i%5==0):
             print("Modelo creado hasta documento: "+str(i))
     return lista
+
+def load_PLDA_model(path):
+    """ Carga el modelo PLDA que estaba almacenado en un path
+                   Parámetros:
+                      path -- path en el que estaba almacenado el modelo
+        """
+    model = tp.PLDAModel.load(path)
+    return model

@@ -23,7 +23,8 @@ def create_arguments():
                         help='Path to the directory with the timelines tsv files.')
     parser.add_argument('-k', dest='topics_per_label', action='store', default=1,
                         help='Indicates the amount of topics per label to generate')
-
+    parser.add_argument('-n', dest='topic_words',  nargs='+', default=1,
+                        help='Indicates the amount of words to include in the topics information file')
     parser.add_argument('--path',dest='path_dir', nargs='+',
                         help='Path to the directory to save the generated plda model.')
 
@@ -38,6 +39,7 @@ if __name__ == '__main__':
     num_topics=args.topics_per_label[0]
     dest_dir=args.path_dir[0]
     n=args.topic_words[0]
+
     users_json=json_reader(user_dir)
     all_users_timelines=all_csv_reader(users_json,time_dir)
 
@@ -70,4 +72,39 @@ if __name__ == '__main__':
 
     plda_model.save(dest_dir+'/plda_model.pkl')
 
-    
+    infoTopics = ""
+    j = 0
+    for i in range(len(plda_model.topic_label_dict)):
+        l = 0
+        while (l < plda_model.topics_per_label and j < plda_model.k):
+            infoTopics = infoTopics + plda_model.topic_label_dict[i] + ": "
+            tuplas = plda_model.get_topic_words(j, int(n))
+
+            for k in range(len(tuplas)):
+                tupla = tuplas[k]
+                palabra = tupla[0]
+                probabilidad = str(tupla[1])
+                infoTopics = infoTopics + palabra + "," + probabilidad + "\t"
+            infoTopics = infoTopics + "\n"
+            j += 1
+            l += 1
+    # FileHandler.guardarDocumento(infoTopics, "../Archivos/infoTopics.txt")
+    with open(dest_dir + '/topic_words.txt', 'w') as outfile:
+        outfile.write(infoTopics)
+
+    topics = infoTopics.split("\n")
+
+    i = 0
+    for topic in topics:
+        dic = {}
+
+        if topic == "":
+            break
+
+        if topic.__contains__(':'):
+            topic = topic.split(':')[1]
+
+        dic = TransformData.lineToDict(topic)
+        # Graphics.crearNubesPalabras(dic,True,"../Archivos/nubes/"+str(i))
+        Graphics.crearNubesPalabras(dic, True, dest_dir + "/" + str(i))
+        i = i + 1
