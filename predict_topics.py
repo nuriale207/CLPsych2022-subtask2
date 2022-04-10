@@ -1,14 +1,10 @@
 import argparse
-import json
 from pathlib import Path
 
 import pandas as pd
 
-import Graphics
-import TransformData
-from data_reader import json_reader, all_csv_reader, process_data, user_csv_reader
-from generate_topics import createPLDA, obtenerVectorTopics, load_PLDA_model
-from preprocess_data import vocab_size
+from utils.data_reader import json_reader, process_data, user_csv_reader
+from utils.generate_topics import obtenerVectorTopics, load_PLDA_model
 
 
 def create_arguments():
@@ -53,7 +49,6 @@ if __name__ == '__main__':
         for i in range(len(preprocessed_docs)):
             topics=obtenerVectorTopics(plda_model,preprocessed_docs[i])
             lista_topics.append(list(topics))
-            # lista_topics.append({"post_id":df["postid"][i],"topics":list(topics)})
         df_topics=pd.DataFrame(data={"postid":df["postid"],"date":df["date"],"label":df["label"],"topics":lista_topics})
         filepath = Path(dest_dir+'/'+user+"_topics.tsv")
         filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -61,13 +56,6 @@ if __name__ == '__main__':
 
     plda_model.save(dest_dir+'/plda_model.pkl')
 
-    #     all_users_topics[user]=lista_topics
-    # print(all_users_topics)
-    # all_users_topics_json=json.dumps(all_users_topics)
-    # with open(dest_dir + '/posts_topics.json', 'w') as outfile:
-    #     outfile.write(all_users_topics_json)
-    # print(all_users_topics)
 
-    # print(str(len(modelo.topic_label_dict) * modelo.topics_per_label))
 
 

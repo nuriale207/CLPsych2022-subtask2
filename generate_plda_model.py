@@ -1,14 +1,12 @@
 import argparse
-import json
 from pathlib import Path
 
 import pandas as pd
 
-import Graphics
-import TransformData
-from data_reader import json_reader, all_csv_reader, process_data, user_csv_reader
-from generate_topics import createPLDA, obtenerVectorTopics
-from preprocess_data import vocab_size
+from utils import transform_data, graphics
+from utils.data_reader import json_reader, all_csv_reader, process_data, user_csv_reader
+from utils.generate_topics import createPLDA, obtenerVectorTopics
+from utils.preprocess_data import vocab_size
 
 
 def create_arguments():
@@ -88,7 +86,6 @@ if __name__ == '__main__':
             infoTopics = infoTopics + "\n"
             j += 1
             l += 1
-    # FileHandler.guardarDocumento(infoTopics, "../Archivos/infoTopics.txt")
     with open(dest_dir + '/topic_words.txt', 'w') as outfile:
         outfile.write(infoTopics)
 
@@ -104,7 +101,6 @@ if __name__ == '__main__':
         if topic.__contains__(':'):
             topic = topic.split(':')[1]
 
-        dic = TransformData.lineToDict(topic)
-        # Graphics.crearNubesPalabras(dic,True,"../Archivos/nubes/"+str(i))
-        Graphics.crearNubesPalabras(dic, True, dest_dir + "/" + str(i))
+        dic = transform_data.lineToDict(topic)
+        graphics.crearNubesPalabras(dic, True, dest_dir + "/" + str(i))
         i = i + 1

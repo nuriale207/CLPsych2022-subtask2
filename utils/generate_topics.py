@@ -120,36 +120,6 @@ def createLDAlist(parametros, cuerpo):
 
 
 
-def Tfidf(datos):
-    """ Crea el modelo TFIDF, dados unos documentos
-
-             Parámetros:
-                    datos -- lista de Strings a la que aplicar la representación TFIDF
-    """
-
-    vectorizer = TfidfVectorizer().fit(datos)
-    X_train = vectorizer.transform(datos)
-
-    return vectorizer
-
-def crearModeloClasificacion(documentos,modelo):
-    """ Predice los topics de los documentos dado un modelo LDA
-
-                  Parámetros:
-                  documentos -- una lista de listas en la que se almacenan los documentos
-                  modelo -- modelo LDA que se emplea para inferir los topics
-              """
-    lista = []
-    i=0
-    for index, document in enumerate(documentos):
-        documento = modelo.make_doc(document)
-        infer = modelo.infer(documento, iter=100, tolerance=-1, workers=0, parallel=0, together=False)
-        lista.append(infer[0])
-        i=i+1
-        if(i%5==0):
-            print("Modelo creado hasta documento: "+str(i))
-    return lista
-
 def load_PLDA_model(path):
     """ Carga el modelo PLDA que estaba almacenado en un path
                    Parámetros:
