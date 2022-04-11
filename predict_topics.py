@@ -38,6 +38,7 @@ if __name__ == '__main__':
 
     plda_model=load_PLDA_model(model_path)
 
+    plda_model.train(500)
     users_json=json_reader(user_dir)
 
 

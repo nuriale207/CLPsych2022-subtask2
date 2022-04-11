@@ -72,6 +72,18 @@ def user_csv_reader(user_id,users_json,timeline_dir):
             user_df = pd.concat([user_df, csv_reader(timeline_dir + "/" + timeline + ".tsv")], ignore_index=True)
     return user_df
 
+def concat_csv_reader(user_indexes, users_json,timeline_dir):
+    i = 0
+
+    for user_indx in user_indexes:
+        user=list(users_json.keys())[user_indx]
+        if (i == 0):
+            concat_df = user_csv_reader(user, users_json, timeline_dir)
+            i += 1
+        else:
+            concat_df = pd.concat([concat_df, user_csv_reader(user, users_json, timeline_dir)], ignore_index=True)
+    return concat_df
+
 def process_data(df: pd.DataFrame) -> pd.DataFrame:
     """Process input dataframe.
 
@@ -88,7 +100,7 @@ def process_data(df: pd.DataFrame) -> pd.DataFrame:
     print(df.keys())
     documents=df["content"]
     titles=df["title"]
-    df["label"]=df["label"].replace(0,"O")
+    df["label"]=df["label"].replace(0,"0")
 
     print(documents)
     print(titles)

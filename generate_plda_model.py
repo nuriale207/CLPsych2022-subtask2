@@ -1,4 +1,5 @@
 import argparse
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -24,7 +25,7 @@ def create_arguments():
     parser.add_argument('-n', dest='topic_words',  nargs='+', default=1,
                         help='Indicates the amount of words to include in the topics information file')
     parser.add_argument('--path',dest='path_dir', nargs='+',
-                        help='Path to the directory to save the generated plda model.')
+                        help='Path to the directory to save the generated plda model and json files.')
 
     args = parser.parse_args()
     return args
@@ -72,6 +73,7 @@ if __name__ == '__main__':
 
     infoTopics = ""
     j = 0
+    topic_label_dict=dict()
     for i in range(len(plda_model.topic_label_dict)):
         l = 0
         while (l < plda_model.topics_per_label and j < plda_model.k):
@@ -84,6 +86,7 @@ if __name__ == '__main__':
                 probabilidad = str(tupla[1])
                 infoTopics = infoTopics + palabra + "," + probabilidad + "\t"
             infoTopics = infoTopics + "\n"
+            topic_label_dict[j]=plda_model.topic_label_dict[i]
             j += 1
             l += 1
     with open(dest_dir + '/topic_words.txt', 'w') as outfile:
@@ -91,6 +94,9 @@ if __name__ == '__main__':
 
     topics = infoTopics.split("\n")
 
+    json_topic_label_dict=json.dumps(topic_label_dict)
+    with open(dest_dir + '/topic_label_dict.json', 'w') as outfile:
+        outfile.write(json_topic_label_dict)
     i = 0
     for topic in topics:
         dic = {}
