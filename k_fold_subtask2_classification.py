@@ -8,7 +8,8 @@ from utils.data_reader import json_reader, all_csv_reader, csv_reader, process_d
 from utils.classification_utils import *
 from utils.generate_topics import createPLDA, obtenerVectorTopics
 from utils.preprocess_data import vocab_size
-
+from utils.topics_metrics import sentiment_score
+from sklearn.ensemble import RandomForestClassifier
 
 def create_arguments():
     parser = argparse.ArgumentParser(
@@ -28,8 +29,13 @@ def create_arguments():
                         help='Indicates the amount of folds to make')
     parser.add_argument('--path',dest='path_dir', nargs='+',
                         help='Path to the directory to save the generated plda model and json files.')
-    parser.add_argument('--max', dest='max',action='store_true',help="If set, instead of rules it predicts the label "
-                                                                     "related to the most salient topic")
+    parser.add_argument('--polarity', dest='polarity', action='store_true', help="If set, each topic word is labelled"
+                                                                                 "with 0 if it is negative, 0.5 if it is"
+                                                                                 "neutral or 1 if it is positive. Otherwise"
+                                                                                 "it takes into account the polarity level"
+                                                                                 "of words")
+
+
 
     args = parser.parse_args()
     return args
@@ -43,10 +49,10 @@ if __name__ == '__main__':
     num_topics=int(num_topics)
     dest_dir=args.path_dir[0]
     n=args.topic_words[0]
-    max=args.max
     k=args.folds[0]
     k=int(k)
     users_json = json_reader(user_dir)
+    polarity=args.polarity
     # all_users_timelines = all_csv_reader(users_json, time_dir)
 
     n_users=len(users_json)
@@ -66,9 +72,8 @@ if __name__ == '__main__':
         train_users_indexes=indexes[0:first_index]+indexes[fold*users_per_fold:len(indexes)]
         first_index=fold*users_per_fold
 
-        #TRAIN PLDA WITH THE TRAINING SUBSET
-        for train_index in train_users_indexes:
-            train_users_df=concat_csv_reader(train_users_indexes,users_json,time_dir)
+        #TRAIN PLDA WITH ALL THE TRAINING SUBSET POSTS
+        train_users_df=concat_csv_reader(train_users_indexes,users_json,time_dir)
         train_df,preprocessed=process_data(train_users_df)
         labels = list(train_df["label"])
         vocab, vocab_n = vocab_size(preprocessed)
@@ -76,6 +81,7 @@ if __name__ == '__main__':
         eta = 200 / vocab_n
         plda_model = createPLDA(0, 0, num_topics, alpha, eta, preprocessed, labels)
         plda_model.train(500)
+
         #GENERATE THE TOPIC LABEL DICT
         infoTopics = ""
         j = 0
@@ -85,22 +91,38 @@ if __name__ == '__main__':
             while (l < plda_model.topics_per_label and j < plda_model.k):
                 infoTopics = infoTopics + plda_model.topic_label_dict[i] + ": "
                 tuplas = plda_model.get_topic_words(j, int(n))
-
+                topic_sentiment_score = (sentiment_score(tuplas))
                 for k in range(len(tuplas)):
                     tupla = tuplas[k]
                     palabra = tupla[0]
                     probabilidad = str(tupla[1])
                     infoTopics = infoTopics + palabra + "," + probabilidad + "\t"
                 infoTopics = infoTopics + "\n"
-                topic_label_dict[str(j)] = plda_model.topic_label_dict[i]
+                topic_label_dict[j] = {"label": plda_model.topic_label_dict[i],
+                                       "sentiment_score": topic_sentiment_score}
                 j += 1
                 l += 1
 
+        #GENERATE THE TRAINING VECTORS
+        train_vectors=[]
+        train_labels=[]
+        for train_index in train_users_indexes:
+            user = list(users_json.keys())[train_index]
+            df = user_csv_reader(user, users_json, time_dir)
+            df, preprocessed_docs = process_data(df)
+            lista_topics = []
+            for i in range(len(preprocessed_docs)):
+                topics = obtenerVectorTopics(plda_model, preprocessed_docs[i])
+                lista_topics.append(list(topics))
+            train_vectors.append(get_post_rankings(lista_topics, topic_label_dict,False))
+            train_labels.append(users_json[user]["risk_level"])
+
         #PREDICT TEST SET LABELS
+        test_vectors=[]
+        test_labels=[]
         for test_index in test_users_indexes:
             user=list(users_json.keys())[test_index]
-            if(user=="we7v9itezv"):
-                print("")
+
             predictions_report+="USER: "+user+" predictions \n"
             df = user_csv_reader(user,users_json, time_dir)
             df, preprocessed_docs = process_data(df)
@@ -108,25 +130,35 @@ if __name__ == '__main__':
             for i in range(len(preprocessed_docs)):
                 topics = obtenerVectorTopics(plda_model, preprocessed_docs[i])
                 lista_topics.append(list(topics))
+            #SAVE PREDICTED TEST TOPICS
             df_topics = pd.DataFrame(
                 data={"postid": df["postid"], "date": df["date"], "label": df["label"], "topics": lista_topics})
-            filepath = Path(dest_dir + '/' + user + "_topics.tsv")
+            filepath = Path(dest_dir + '/FOLD'+str(fold)+"/"+ user + "_topics.tsv")
             filepath.parent.mkdir(parents=True, exist_ok=True)
             df_topics.to_csv(filepath, sep='\t')
-            if(max):
-                predictions = arg_max_classification(lista_topics, topic_label_dict,convert_from_string=False)
-            else:
-                predictions = rule_based_classification(lista_topics, topic_label_dict, convert_from_string=False)
+            test_vectors.append(get_post_rankings(lista_topics, topic_label_dict,False))
+            test_labels.append(users_json[user]["risk_level"])
 
-            real_labels = [str(i) for i in df["label"]]
-            report=classification_report(real_labels, predictions)
-            report_dict = classification_report(real_labels, predictions,output_dict=True)
-            predictions_report+="Real labels: "+str(real_labels)+"\n"
-            predictions_report+="Predicted labels: "+str(predictions)+"\n"
+        #TRAIN CLASSIFIER WITH RANDOM FOREST
+        clf = RandomForestClassifier(max_depth=2, random_state=0)
+        train_test_vectors=train_vectors+test_vectors
+        longest_vector = max([len(elem) for elem in train_test_vectors])
+        train_vectors=fill_with_zeros(train_vectors,longest_vector)
 
-            predictions_report+=report+"\n"
-            all_macro.append(report_dict["macro avg"])
-            all_weighted.append(report_dict["weighted avg"])
+        clf.fit(np.array(train_vectors), train_labels)
+
+        test_vectors=fill_with_zeros(test_vectors,longest_vector)
+        predictions = clf.predict(test_vectors)
+
+        report=classification_report(test_labels, predictions)
+        report_dict = classification_report(test_labels, predictions,output_dict=True)
+        predictions_report+="Real labels: "+str(test_labels)+"\n"
+        predictions_report+="Predicted labels: "+str(predictions)+"\n"
+
+        predictions_report+=report+"\n"
+        all_macro.append(report_dict["macro avg"])
+        all_weighted.append(report_dict["weighted avg"])
+
 
     macro_precision=0
     macro_recall=0

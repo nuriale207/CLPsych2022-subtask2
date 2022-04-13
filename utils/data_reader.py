@@ -111,8 +111,8 @@ def process_data(df: pd.DataFrame) -> pd.DataFrame:
     preprocessed=preprocess_documents(list(df["content"]))
     for doc in range(len(preprocessed)):
         preprocessed[doc]=remove_stopword_tokens(preprocessed[doc])
-        preprocessed[doc]=stem(" ".join(preprocessed[doc]))
-        preprocessed[doc]=preprocessed[doc].split(" ")
+        # preprocessed[doc]=stem(" ".join(preprocessed[doc]))
+        # preprocessed[doc]=preprocessed[doc].split(" ")
     return df,preprocessed
 
 

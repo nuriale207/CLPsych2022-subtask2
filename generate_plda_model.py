@@ -8,6 +8,7 @@ from utils import transform_data, graphics
 from utils.data_reader import json_reader, all_csv_reader, process_data, user_csv_reader
 from utils.generate_topics import createPLDA, obtenerVectorTopics
 from utils.preprocess_data import vocab_size
+from utils.topics_metrics import sentiment_score
 
 
 def create_arguments():
@@ -53,40 +54,41 @@ if __name__ == '__main__':
     eta=200/vocab_n
 
 
-    plda_model=createPLDA(0,0,2,alpha,eta,preprocessed_docs,labels)
+    plda_model=createPLDA(0,0,int(num_topics),alpha,eta,preprocessed_docs,labels)
 
-    all_users_topics=dict()
-    for user in users_json:
-        df=user_csv_reader(user,users_json,time_dir)
-        df,preprocessed_docs=process_data(df)
-        lista_topics=[]
-        for i in range(len(preprocessed_docs)):
-            topics=obtenerVectorTopics(plda_model,preprocessed_docs[i])
-            lista_topics.append(list(topics))
-            # lista_topics.append({"post_id":df["postid"][i],"topics":list(topics)})
-        df_topics=pd.DataFrame(data={"postid":df["postid"],"date":df["date"],"label":df["label"],"topics":lista_topics})
-        filepath = Path(dest_dir+'/'+user+"_topics.tsv")
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-        df_topics.to_csv(filepath,sep='\t')
+    # all_users_topics=dict()
+    # for user in users_json:
+    #     df=user_csv_reader(user,users_json,time_dir)
+    #     df,preprocessed_docs=process_data(df)
+    #     lista_topics=[]
+    #     for i in range(len(preprocessed_docs)):
+    #         topics=obtenerVectorTopics(plda_model,preprocessed_docs[i])
+    #         lista_topics.append(list(topics))
+    #         # lista_topics.append({"post_id":df["postid"][i],"topics":list(topics)})
+    #     df_topics=pd.DataFrame(data={"postid":df["postid"],"date":df["date"],"label":df["label"],"topics":lista_topics})
+    #     filepath = Path(dest_dir+'/'+user+"_topics.tsv")
+    #     filepath.parent.mkdir(parents=True, exist_ok=True)
+    #     df_topics.to_csv(filepath,sep='\t')
 
     plda_model.save(dest_dir+'/plda_model.pkl')
 
     infoTopics = ""
     j = 0
     topic_label_dict=dict()
+    topics_sentiment_score=[]
     for i in range(len(plda_model.topic_label_dict)):
         l = 0
         while (l < plda_model.topics_per_label and j < plda_model.k):
             infoTopics = infoTopics + plda_model.topic_label_dict[i] + ": "
             tuplas = plda_model.get_topic_words(j, int(n))
-
+            topic_sentiment_score=(sentiment_score(tuplas))
             for k in range(len(tuplas)):
                 tupla = tuplas[k]
                 palabra = tupla[0]
                 probabilidad = str(tupla[1])
                 infoTopics = infoTopics + palabra + "," + probabilidad + "\t"
             infoTopics = infoTopics + "\n"
-            topic_label_dict[j]=plda_model.topic_label_dict[i]
+            topic_label_dict[j]={"label":plda_model.topic_label_dict[i],"sentiment_score":topic_sentiment_score}
             j += 1
             l += 1
     with open(dest_dir + '/topic_words.txt', 'w') as outfile:

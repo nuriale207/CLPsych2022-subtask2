@@ -1,9 +1,11 @@
 from collections import Counter
 
+import nltk
 import numpy as np
 from scipy.spatial import distance
 from scipy.spatial.distance import jensenshannon
-
+from nltk.sentiment import SentimentIntensityAnalyzer
+nltk.download('vader_lexicon')
 
 def distanciaEuclidea(vector1,vector2):
     """ Calcula la distancia Euclidea entre dos vectores
@@ -133,3 +135,32 @@ def get_topic_coherence(data,modelo,k):
         # update TC_k
         TC_k += tmp
     return TC_k,counter
+
+
+def sentiment_score(tuples,polarity=False):
+    """
+    Computes a score from 0 to 1 given a set of tuples with the words in a topic.
+    Each word gets a value of positivity, negativity or neutral. Positive words are balanced with a 0, neutral ones with
+    5 and positive ones with 10.
+    :param tuples: a tuple with the form (word,weight) of the n-most salient words in a topic
+    """
+    sia = SentimentIntensityAnalyzer()
+    topic_score=0
+    weights={'neg': 0.0, 'neu': 0.5, 'pos': 1.0}
+    for k in range(len(tuples)):
+        tuple = tuples[k]
+        word = tuple[0]
+        probability = str(tuple[1])
+        if(polarity==False):
+            score=sia.polarity_scores(word)["compound"]
+        else:
+            scores=sia.polarity_scores(word)
+            if(scores["neg"]>scores["neu"] & scores["neg"]>scores["pos"]):
+                score=weights["neg"]
+            elif(scores["pos"]>scores["neu"] & scores["pos"]>scores["neg"]):
+                score = weights["pos"]
+            else:
+                score=weights["neu"]
+        topic_score+=score
+
+    return topic_score/len(tuples)
